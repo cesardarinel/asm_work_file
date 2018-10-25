@@ -1,26 +1,26 @@
-﻿
+﻿; Autor: Cesar Darinel Ortiz
+; Tarea: 5 laboratorio
+; Fecha Entrega: 25/10/2018
+
 .model small
 .stack 256
 .data
 
 ;========================Variables declaradas aqui===========================
-letreromsj DB 'Hola Hola        asdasd  asdas   $'	; Cadena a desplegar
-
 letrero DB 'Digite el archivo a leer -->: $'
 uncaracter db 1 dup (' ')    
 error1 DB 'El archivo no pudo ser abierto o no existe : $'
 ; texto a solicita la cadena
-arregloConDatos db 51 dup (0)           ; buffer de lectura de cadena
-filename db "myfile.txt", 0 ;C:\asm\asm_work_file\mifile.txt
-puntero dw ?
+nombreArchivo db 51 dup (0)           ; buffer de lectura de cadena
+punteroArchivo dw ?
 ;============================================================================
 
-; tratando de hacer una funcion
-	printf macro texto				; espera en dl el caracter a mostrar.
+; macro printf
+printf macro texto				; espera en dl el caracter a mostrar.
 	mov ah,09                    ; Para mostrar en pantalla una cadena
 	mov dx, offset texto       ; posición de la cadena a montar
 	int 21h                      ; llamó al sistema
-	endm
+endm
 ; tratando de hacer una funcion
 .code
 main:	
@@ -30,94 +30,104 @@ main:
     and sp, not 3           ;align stack to avoid AC fault
 ;====================================Código==================================
 	printf letrero
+	call ciclodelectura
+;====================================ciclo_principal mantener codigo ==================================
+ciclo_principal:
+	mov ah,01                    ; para lectura de teclado.
+	int 21h                      ; llamada al SO
+	cmp al,13                    ; verificar si se pulsa el Enter.
+	je fin         ; saltamos a solicitar el caracter si presiona enter
+	;ciclo principal 
+	call abrir_archivo
+	call imprimir_archivo
+	call cerrar_archivo
+	jmp ciclo_principal  
+
 ;====================================leer el archivo a buscar==================================
 ciclodelectura:
 	mov ah,01                    ; para lectura de teclado.
 	int 21h                      ; llamada al SO
 	cmp al,13                    ; verificar si se pulsa el Enter.
-	je leer_archivo     ; saltamos a solicitar el caracter si presiona enter
-	mov arregloConDatos[bx],al   ; copiar el carácter tomado en el buffer.
+	je ciclodelecturafin         ; saltamos a solicitar el caracter si presiona enter
+	mov nombreArchivo[bx],al     ; copiar el carácter tomado en el buffer.
 	cmp bx,50                    ; verificó si debo de salir.
-	je leer_archivo     ; si escribimos más de 50 caracteres dejo de leer
+	je ciclodelecturafin         ; si escribimos más de 50 caracteres dejo de leer
 	inc bx                       ; apuntó a la sgte. posición del buffer.
 	jmp ciclodelectura           ; continuó leyendo
+	ciclodelecturafin:
+	ret
 ;====================================Abrir el archivo==================================
-leer_archivo:
+abrir_archivo:
 	mov ah, 3dh
 	mov cx, 0
 	mov al, 2 
-	mov dx, offset filename;arregloConDatos
+	mov dx, offset nombreArchivo
 	int 21h
 	jc error
-	mov puntero, ax
+	mov punteroArchivo, ax
 	jmp imprimir_archivo
-
-;====================================Error al abrir el archivo==================================
 	error: 
 	printf error1       ; posición de la cadena a montar
 	jmp fin 
-
+	fin_abrir_archivo:
+	ret
+;====================================imprimo el archivo pantalla==================================
 imprimir_archivo:
 	mov ax,0b800h
 	mov es,ax	
 	mov bx, 0
 	call limpia
-print_pantalla:				;segmento dir. de mem de video.
-	mov bx, 0					;puntero para video
-	mov di, 0					;puntero letrero
-
-	ok:
-	call leer_caracter          ;mov al,arregloConDatos[di]
+	mov bx, 0					;punteroArchivo para video
+	mov di, 0					;punteroArchivo letrero
+	imprimo_un_caracter:
+	call leo_archivo          ;mov al,nombreArchivo[di]
 	cmp ax,0					;verifico si terminó la candena
-	je fin	
+	je fin_imprimir_archivo	
 	mov al,uncaracter
 	cmp al,13  					;verifico si terminó la candena
 	je enter_
 	mov es:[bx], al				;coloco en pantalla
 	inc bx	
 	inc bx					;apunto a próximo caracter
-	jmp ok
+	jmp imprimo_un_caracter
+	fin_imprimir_archivo:
+	ret
 	
-	leer_caracter:; espera en dl el caracter a mostrar.
-	push bx cx dx		;
+leo_archivo:
+	push bx cx dx		    ;
 	mov ah,3fh				;para mostrar caracter
-	mov bx,puntero
+	mov bx,punteroArchivo
 	mov dx,offset uncaracter
 	mov cx,1
 	int 21h						; 
 	pop dx cx bx			;
 	ret						;
+
 enter_:
-	push ax cx dx		;
-	inc bx;add bx ,1		; 
-	pop dx cx  ax			;
-	ret						
-
-
-limpia:		;
-	mov al,' ' 
-	mov es:[bx], al				;coloco en pantalla
-	cmp bx, (80*80*2)+(25*2)
-	je print_pantalla
+	push ax cx dx		
 	inc bx
-	inc bx
-	jmp limpia 		;	
+	pop dx cx  ax			
+	ret			
 
+limpia:	;
+	push ax bx cx dx	
+	mov ah, 0x06
+	mov al, 0
+	int 10h
+	pop dx bx cx  ax	
+	ret
 
-fin:
-	;cerrar archivo 
+cerrar_archivo:	;
+	push ax bx cx dx	
 	mov ah, 3eh
-	mov bx , puntero
+	mov bx , punteroArchivo
 	int 21h
+	pop dx bx cx  ax	
+	ret
+fin:
+	call cerrar_archivo
 ;============================================================================
 .exit
 ;================================Funciones aqui==============================
-					;
-
 ;============================================================================
 end main
-
-
-;mov ah, 0x06
-;mov al, 0
-;int 10h
