@@ -71,8 +71,8 @@ print_pantalla:				;segmento dir. de mem de video.
 	cmp ax,0					;verifico si terminó la candena
 	je fin	
 	mov al,uncaracter
-	;cmp al,10  					;verifico si terminó la candena
-	;je enter_
+	cmp al,13  					;verifico si terminó la candena
+	je enter_
 	mov es:[bx], al				;coloco en pantalla
 	inc bx	
 	inc bx					;apunto a próximo caracter
@@ -89,7 +89,7 @@ print_pantalla:				;segmento dir. de mem de video.
 	ret						;
 enter_:
 	push ax cx dx		;
-	;add bx ,1		; 
+	inc bx;add bx ,1		; 
 	pop dx cx  ax			;
 	ret						
 
@@ -99,6 +99,7 @@ limpia:		;
 	mov es:[bx], al				;coloco en pantalla
 	cmp bx, (80*80*2)+(25*2)
 	je print_pantalla
+	inc bx
 	inc bx
 	jmp limpia 		;	
 
@@ -115,3 +116,8 @@ fin:
 
 ;============================================================================
 end main
+
+
+;mov ah, 0x06
+;mov al, 0
+;int 10h
