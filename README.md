@@ -8,3 +8,6 @@
 - BONO
 - [x] no hay  
 
+mov ah, 0x06
+mov al, 0
+int 10h
